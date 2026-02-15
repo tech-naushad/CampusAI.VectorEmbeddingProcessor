@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="CampusAI.Ingestion.API/CampusAI.Ingestion.API.csproj" Id="a7b56998-8e8e-4163-82dd-5be4f9948e87" />
+  <Project Path="CampusAI.Modules/CampusAI.Modules.csproj" Id="deafdccf-516e-4732-b58a-8eee37847e96" />
+  <Project Path="CampusAI.VectorPipeline/CampusAI.VectorPipeline.csproj" Id="55cbaad2-0042-45aa-8f33-412e0b4afa27" />
+</Solution>

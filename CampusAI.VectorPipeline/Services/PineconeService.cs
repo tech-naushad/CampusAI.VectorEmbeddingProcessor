@@ -4,78 +4,105 @@ using CampusAI.VectorPipeline.Vector;
 using Microsoft.Extensions.Options;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace CampusAI.VectorPipeline.Services
 {
     public interface IPineconeService
     {
         //Task UpsertAsync<T>(IEnumerable<VectorRecord> records, string indexName);
-        Task UpsertAsync(IEnumerable<VectorRecord> records, string indexName, string? ns = null);
+        Task UpsertAsync(IEnumerable<VectorRecord> records, string? ns = null);
     }
     public class PineconeService : IPineconeService
     {
         private readonly HttpClient _httpClient;
         private readonly PineconeOptions _options;
 
-        public PineconeService(
-            HttpClient httpClient,
-            IOptions<PineconeOptions> options)
+        public PineconeService(HttpClient httpClient, IOptions<PineconeOptions> options)
         {
             _httpClient = httpClient;
             _options = options.Value;
 
-            _httpClient.BaseAddress =
-                new Uri($"https://{_options.IndexName}-{_options.Environment}.svc.pinecone.io");
-
+            //_httpClient.BaseAddress = new Uri($"https://{_options.Host}");
             _httpClient.DefaultRequestHeaders.Add("Api-Key", _options.ApiKey);
+            _httpClient.DefaultRequestHeaders.Add("X-Pinecone-API-Version", "2024-07");
         }
 
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+
+
         /// <summary>
-        /// Upserts a batch of VectorRecords into Pinecone
+        /// Upserts VectorRecords into Pinecone in batches of 100.
+        /// Namespace is created automatically if it doesn't exist.
         /// </summary>
-        /// <param name="records">Vectors to insert</param>
-        /// <param name="indexName">Pinecone index name</param>
-        /// <param name="ns">Optional namespace; if null uses default from options</param>
-        public async Task UpsertAsync(
-            IEnumerable<VectorRecord> records,
-            string indexName,
-            string? ns = null)
+        public async Task UpsertAsync(IEnumerable<VectorRecord> records, string? ns = null)
         {
             if (records == null) return;
 
-            var namespaceToUse = ns ?? _options.Namespace;
+            var batches = records
+                .Select((r, i) => new { r, i })
+                .GroupBy(x => x.i / 100)
+                .Select(g => g.Select(x => x.r).ToList());
 
-            var requestUrl = $"https://{indexName}-{_options.Environment}.svc.pinecone.io/vectors/upsert";
-
-            // Pinecone expects JSON like { "vectors": [...], "namespace": "..." }
-            var payload = new
+            foreach (var batch in batches)
             {
-                vectors = records,
-                @namespace = namespaceToUse
-            };
-
-            var content = new StringContent(
-                JsonSerializer.Serialize(payload),
-                Encoding.UTF8,
-                "application/json"
-            );
-
-            var response = await _httpClient.PostAsync(requestUrl, content);
-
-            response.EnsureSuccessStatusCode();
+                await UpsertBatchAsync(batch, ns);
+            }
         }
 
-        /// <summary>
-        /// Helper: upsert any IVectorizable entities directly
-        /// </summary>
-        public async Task UpsertAsync<T>(
-            IEnumerable<T> entities,
-            IEmbeddingProvider embeddingProvider,
-            string indexName,
-            string? ns = null) where T : IVectorizable
+        private async Task UpsertBatchAsync(List<VectorRecord> batch, string? ns)
         {
-            var vectorRecords = await Vectorizer.ToVectorRecordsAsync(entities, embeddingProvider);
-            await UpsertAsync(vectorRecords, indexName, ns);
+            var payload = new PineconeUpsertRequest
+            {
+                Vectors = batch.Select(r => new PineconeVector
+                {
+                    Id = r.Id,
+                    Values = r.Values,
+                    Metadata = r.Metadata
+                }).ToList(),
+                Namespace = ns
+            };
+
+            var json = JsonSerializer.Serialize(payload, JsonOptions);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            // To this:
+            var url = $"{_options.Host}/vectors/upsert";
+            var response = await _httpClient.PostAsync(url, content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException(
+                    $"Pinecone upsert failed {(int)response.StatusCode}: {error}");
+            }
+        }
+
+        // ─── Request models ────────────────────────────────────────────────────
+
+        private class PineconeUpsertRequest
+        {
+            [JsonPropertyName("vectors")]
+            public List<PineconeVector> Vectors { get; set; } = new();
+
+            [JsonPropertyName("namespace")]
+            public string? Namespace { get; set; }
+        }
+
+        private class PineconeVector
+        {
+            [JsonPropertyName("id")]
+            public string Id { get; set; } = string.Empty;
+
+            [JsonPropertyName("values")]
+            public float[] Values { get; set; } = Array.Empty<float>();
+
+            [JsonPropertyName("metadata")]
+            public Dictionary<string, object>? Metadata { get; set; }
         }
     }
 }

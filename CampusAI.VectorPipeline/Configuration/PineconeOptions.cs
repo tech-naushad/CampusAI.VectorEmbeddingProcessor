@@ -6,9 +6,7 @@ namespace CampusAI.VectorPipeline.Configuration
 {
     public class PineconeOptions
     {
-        public string ApiKey { get; set; }
-        public string Environment { get; set; }
-        public string IndexName { get; set; }
-        public string Namespace { get; set; }
+        public string ApiKey { get; set; } = string.Empty;
+        public string Host { get; set; } = string.Empty;
     }
 }

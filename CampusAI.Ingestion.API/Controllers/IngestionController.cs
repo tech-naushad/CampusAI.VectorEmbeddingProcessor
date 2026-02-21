@@ -10,18 +10,17 @@ namespace CampusAI.Ingestion.API.Controllers
     [Route("[controller]")]
     public class IngestionController : ControllerBase
     {
-        private readonly ICampusIngestionService _iService;
+        private readonly ICampusIngestionService _service;
         ICampusIngestionRepository _ingestionRepository;
-        public IngestionController(ICampusIngestionService iService)
+        public IngestionController(ICampusIngestionService service)
         {
-            //_ingestionOrchestrator = ingestionOrchestrator;
-            _iService = iService;
+            _service = service;
         }
 
         [HttpPost]
         public async Task<IActionResult> RunPipelineAsync([FromBody] ModuleOptions request)
         {
-            var result = await _iService.RunAsync();
+            var result = await _service.RunAsync();
             // 1. Fetch from SQL
            // var rows = await _ingestionRepository.BuildVectorRecords(result.ToList());
 

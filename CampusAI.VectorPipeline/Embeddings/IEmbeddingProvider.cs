@@ -21,6 +21,6 @@ namespace CampusAI.VectorPipeline.Embeddings
         /// </summary>
         /// <param name="texts">List of texts to embed</param>
         /// <returns>List of embedding vectors</returns>
-        Task<List<float[]>> GenerateEmbeddingsAsync(IEnumerable<string> texts);
+        Task<List<float[]>> GenerateBatchEmbeddingsAsync(IEnumerable<string> texts);
     }
 }

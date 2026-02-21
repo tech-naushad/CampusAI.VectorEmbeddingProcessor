@@ -15,9 +15,10 @@ namespace CampusAI.VectorPipeline.Extensions
     {
         public static void AddVectorPipeline(this IServiceCollection services)            
         {
-            services.AddHttpClient<IEmbeddingProvider, OpenAIEmbeddingProvider>();
+            //services.AddHttpClient<IEmbeddingProvider, OpenAIEmbeddingProvider>();
+            services.AddHttpClient<IEmbeddingProvider, HuggingFaceEmbeddingProvider>();
             services.AddScoped<IDbConnectionFactory, DbConnectionFactory>();
-            services.AddScoped<IEmbeddingProvider, OpenAIEmbeddingProvider>();
+            //services.AddScoped<IEmbeddingProvider, OpenAIEmbeddingProvider>();
           
         }
     }

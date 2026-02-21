@@ -8,6 +8,10 @@
 
   <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.3" />
+	  <Content Include="appsettings-example.json">
+		  <DependentUpon>appsettings.json</DependentUpon>
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
   </ItemGroup>
 
   <ItemGroup>

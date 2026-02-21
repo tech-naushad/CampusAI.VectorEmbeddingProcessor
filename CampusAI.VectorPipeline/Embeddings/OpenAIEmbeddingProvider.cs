@@ -37,7 +37,7 @@ namespace CampusAI.VectorPipeline.Embeddings
             return result!.Data[0].Embedding;
         }
 
-        public async Task<List<float[]>> GenerateEmbeddingsAsync(IEnumerable<string> texts)
+        public async Task<List<float[]>> GenerateBatchEmbeddingsAsync(IEnumerable<string> texts)
         {
             var list = new List<float[]>();
 
